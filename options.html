@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Birthday Buddy — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+
+  <div class="page-header">
+    <span class="page-title">🎂 Birthday Buddy Settings</span>
+  </div>
+
+  <!-- Tab navigation -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="import">📥 Import CSV</button>
+    <button class="tab" data-tab="add">➕ Add Birthday</button>
+    <button class="tab" data-tab="contacts">👥 All Contacts</button>
+    <button class="tab" data-tab="messages">💬 Messages</button>
+  </nav>
+
+  <!-- ── TAB: Import CSV ── -->
+  <div id="tab-import" class="tab-content active">
+    <h2>Import from CSV</h2>
+    <p class="hint">
+      Your CSV should have <strong>Name in column A</strong> and
+      <strong>Birthdate (YYYY/MM/DD) in column B</strong>, with no header row.
+    </p>
+    <div class="csv-example">
+      <code>John Smith,1991/03/25</code><br>
+      <code>Jane Doe,1985/11/08</code>
+    </div>
+    <div class="form-row">
+      <label class="file-label" for="csvFile">
+        📂 Choose CSV File
+        <input type="file" id="csvFile" accept=".csv,.txt" />
+      </label>
+      <span id="csvFileName" class="file-name">No file chosen</span>
+    </div>
+    <div id="csvPreview" class="csv-preview" style="display:none">
+      <div class="preview-label">Preview <span id="csvPreviewCount"></span></div>
+      <div id="csvPreviewList"></div>
+    </div>
+    <div class="btn-row">
+      <button id="importBtn" class="btn btn-primary" disabled>📥 Import Contacts</button>
+    </div>
+    <div id="importFeedback" class="feedback" style="display:none"></div>
+  </div>
+
+  <!-- ── TAB: Add Birthday ── -->
+  <div id="tab-add" class="tab-content">
+    <h2>Add a Birthday</h2>
+    <div class="form-group">
+      <label for="addName">Name *</label>
+      <input type="text" id="addName" placeholder="e.g. John Smith" maxlength="100" />
+    </div>
+    <div class="form-group">
+      <label for="addDate">Birthdate *</label>
+      <input type="date" id="addDate" />
+      <span class="hint-inline">Select the full date — year is optional for reminders</span>
+    </div>
+    <div class="form-group checkbox-row">
+      <label>
+        <input type="checkbox" id="addStarred" />
+        ⭐ Mark as VIP (starred for WhatsApp messages)
+      </label>
+    </div>
+    <div class="btn-row">
+      <button id="addBtn" class="btn btn-primary">➕ Add Contact</button>
+    </div>
+    <div id="addFeedback" class="feedback" style="display:none"></div>
+  </div>
+
+  <!-- ── TAB: All Contacts ── -->
+  <div id="tab-contacts" class="tab-content">
+    <div class="contacts-toolbar">
+      <h2>All Contacts <span id="contactCount" class="count-badge"></span></h2>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Search by name…" />
+      </div>
+    </div>
+    <div id="contactList"></div>
+    <div id="noContacts" class="empty-state" style="display:none">
+      No contacts yet. Import a CSV or add one manually.
+    </div>
+
+    <!-- Inline edit form -->
+    <div id="editForm" class="edit-form" style="display:none">
+      <h3>Edit Contact</h3>
+      <input type="hidden" id="editId" />
+      <div class="form-group">
+        <label for="editName">Name</label>
+        <input type="text" id="editName" maxlength="100" />
+      </div>
+      <div class="form-group">
+        <label for="editDate">Birthdate</label>
+        <input type="date" id="editDate" />
+      </div>
+      <div class="form-group checkbox-row">
+        <label>
+          <input type="checkbox" id="editStarred" />
+          ⭐ VIP / Starred
+        </label>
+      </div>
+      <div class="btn-row">
+        <button id="saveEditBtn" class="btn btn-primary">💾 Save</button>
+        <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: Messages ── -->
+  <div id="tab-messages" class="tab-content">
+    <h2>Birthday Message Templates</h2>
+    <p class="hint">Use <code>{name}</code> as a placeholder — it will be replaced with the person's name.</p>
+
+    <div class="msg-tabs">
+      <button class="msg-lang-tab active" data-lang="english">🇬🇧 English</button>
+      <button class="msg-lang-tab" data-lang="afrikaans">🇿🇦 Afrikaans</button>
+    </div>
+
+    <div id="msgListEditor"></div>
+
+    <div class="form-group" style="margin-top:16px">
+      <label for="newMsg">Add new message</label>
+      <textarea id="newMsg" rows="3" placeholder="Type a new birthday message with {name}…"></textarea>
+    </div>
+    <div class="btn-row">
+      <button id="addMsgBtn" class="btn btn-primary">➕ Add Message</button>
+    </div>
+    <div id="msgFeedback" class="feedback" style="display:none"></div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

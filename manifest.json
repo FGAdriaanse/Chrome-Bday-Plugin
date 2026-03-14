@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Birthday Buddy",
+  "version": "1.0.0",
+  "description": "Never miss a birthday! Daily notifications, WhatsApp message helper, and easy contact management.",
+  "permissions": ["storage", "notifications", "alarms"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Birthday Buddy"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

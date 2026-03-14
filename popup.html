@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Birthday Buddy</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <div class="header">
+    <span class="header-title">🎂 Birthday Buddy</span>
+    <button id="settingsBtn" class="icon-btn" title="Open Settings">⚙️</button>
+  </div>
+
+  <!-- Today's Birthdays -->
+  <div class="section">
+    <div class="section-label">Today's Birthdays</div>
+    <div id="birthdayList"></div>
+    <div id="noBirthdays" class="empty-state" style="display:none">
+      🎈 No birthdays today — check back tomorrow!
+    </div>
+  </div>
+
+  <!-- WhatsApp Message Composer (shown when 💬 clicked) -->
+  <div id="waComposer" class="section composer" style="display:none">
+    <div class="section-label">
+      Send WhatsApp Message
+      <button id="closeComposer" class="close-btn" title="Close">✕</button>
+    </div>
+    <div class="composer-for">For: <strong id="composerName"></strong></div>
+    <div class="composer-row">
+      <label>Language</label>
+      <select id="msgLang">
+        <option value="english">🇬🇧 English</option>
+        <option value="afrikaans">🇿🇦 Afrikaans</option>
+      </select>
+    </div>
+    <div class="msg-list" id="msgList"></div>
+    <div id="msgPreview" class="msg-preview"></div>
+    <div class="btn-row">
+      <button id="copyMsgBtn" class="btn btn-secondary">📋 Copy Message</button>
+      <button id="openWaBtn" class="btn btn-whatsapp">💬 Open WhatsApp Web</button>
+    </div>
+    <div id="copyFeedback" class="copy-feedback" style="display:none">✅ Copied to clipboard!</div>
+  </div>
+
+  <div class="footer">
+    <button id="manageBtn" class="footer-link">Manage Birthdays →</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
