@@ -92,6 +92,26 @@ function setupDailyAlarm() {
   });
 }
 
+// Render the 🎉 emoji onto the toolbar icon using OffscreenCanvas
+// so it shows in its original full colour on every platform.
+async function setEmojiIcon() {
+  try {
+    const imageData = {};
+    for (const size of [16, 48, 128]) {
+      const canvas = new OffscreenCanvas(size, size);
+      const ctx    = canvas.getContext('2d');
+      ctx.font         = `${Math.round(size * 0.82)}px serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🎉', size / 2, size / 2 + size * 0.04);
+      imageData[size]  = ctx.getImageData(0, 0, size, size);
+    }
+    await chrome.action.setIcon({ imageData });
+  } catch {
+    // If OffscreenCanvas isn't available fall back to the static PNG
+  }
+}
+
 // On first install: seed default messages and empty contacts
 chrome.runtime.onInstalled.addListener(async () => {
   const data = await chrome.storage.local.get(['messages', 'contacts']);
@@ -101,12 +121,14 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (Object.keys(updates).length > 0) {
     await chrome.storage.local.set(updates);
   }
+  await setEmojiIcon();
   await updateBadge();
   setupDailyAlarm();
 });
 
 // On browser startup: update badge and notify
 chrome.runtime.onStartup.addListener(async () => {
+  await setEmojiIcon();
   const birthdays = await updateBadge();
   await showNotification(birthdays);
   setupDailyAlarm();

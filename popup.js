@@ -133,8 +133,8 @@ function buildBirthdayItem(contact, date, offset) {
   item.appendChild(starBtn);
   item.appendChild(info);
 
-  // Message button — today + starred only
-  if (offset === 0 && contact.starred) {
+  // Message button — all of today's birthdays
+  if (offset === 0) {
     const btn = document.createElement('button');
     btn.className   = 'msg-open-btn';
     btn.textContent = '✉️ Write Message';
