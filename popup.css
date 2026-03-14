@@ -42,14 +42,48 @@ body {
 
 .icon-btn:hover { opacity: 1; }
 
+/* ── View toggle ── */
+.view-toggle {
+  display: flex;
+  border-bottom: 2px solid #eee;
+  background: #fff;
+}
+
+.view-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 4px 7px;
+  color: #888;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.view-btn:hover { color: #e53935; }
+.view-btn.active {
+  color: #e53935;
+  border-bottom-color: #e53935;
+}
+
+.today-badge {
+  display: inline-block;
+  background: #e53935;
+  color: #fff;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 /* ── Sections ── */
 .section {
   padding: 10px 14px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.section:last-of-type {
-  border-bottom: none;
 }
 
 .section-label {
@@ -64,19 +98,17 @@ body {
   justify-content: space-between;
 }
 
-/* ── Birthday List ── */
+/* ── Today's birthday list ── */
 .birthday-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 6px;
+  padding: 7px 4px;
   border-radius: 8px;
   transition: background 0.12s;
 }
 
-.birthday-item:hover {
-  background: #fef6f6;
-}
+.birthday-item:hover { background: #fef6f6; }
 
 .birthday-info {
   flex: 1;
@@ -101,7 +133,7 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1;
   padding: 3px;
   transition: transform 0.15s;
@@ -110,20 +142,21 @@ body {
 
 .star-btn:hover { transform: scale(1.2); }
 
-.wa-btn {
-  background: #25d366;
-  border: none;
+.copy-btn {
+  background: #fff3e0;
+  border: 1.5px solid #ffb300;
   border-radius: 6px;
-  color: #fff;
+  color: #e65100;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   padding: 5px 9px;
+  white-space: nowrap;
   transition: background 0.15s;
   flex-shrink: 0;
 }
 
-.wa-btn:hover { background: #1ebe5d; }
+.copy-btn:hover { background: #ffe082; }
 
 /* ── Empty state ── */
 .empty-state {
@@ -133,9 +166,67 @@ body {
   font-size: 13px;
 }
 
-/* ── WhatsApp Composer ── */
+/* ── All Contacts list ── */
+.search-input {
+  width: 100%;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-input:focus { border-color: #e53935; }
+
+#allContactsList {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 4px;
+  border-radius: 8px;
+  transition: background 0.12s;
+  border-bottom: 1px solid #f8f8f8;
+}
+
+.contact-item:last-child { border-bottom: none; }
+.contact-item:hover { background: #fef6f6; }
+
+.contact-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.contact-name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contact-date {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 1px;
+}
+
+.contact-bday-today {
+  font-size: 11px;
+  color: #e53935;
+  font-weight: 600;
+}
+
+/* ── Message Composer ── */
 .composer {
   background: #fafafa;
+  border-top: 1px solid #f0f0f0;
 }
 
 .close-btn {
@@ -181,17 +272,15 @@ body {
   outline: none;
 }
 
-.composer-row select:focus {
-  border-color: #e53935;
-}
+.composer-row select:focus { border-color: #e53935; }
 
-/* ── Message list ── */
+/* ── Message option list ── */
 .msg-list {
   display: flex;
   flex-direction: column;
   gap: 5px;
   margin-bottom: 10px;
-  max-height: 130px;
+  max-height: 120px;
   overflow-y: auto;
 }
 
@@ -220,50 +309,34 @@ body {
 
 /* ── Message preview ── */
 .msg-preview {
-  background: #e8f5e9;
-  border-left: 3px solid #25d366;
+  background: #f1f8e9;
+  border-left: 3px solid #8bc34a;
   border-radius: 0 7px 7px 0;
   padding: 8px 10px;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #1b5e20;
+  color: #33691e;
   margin-bottom: 10px;
   min-height: 38px;
   word-break: break-word;
 }
 
-/* ── Buttons ── */
-.btn-row {
-  display: flex;
-  gap: 8px;
-}
-
-.btn {
-  flex: 1;
+/* ── Copy button ── */
+.btn-copy {
+  width: 100%;
+  background: #e53935;
+  color: #fff;
   border: none;
   border-radius: 7px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 8px 6px;
-  transition: opacity 0.15s, transform 0.1s;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px;
+  transition: background 0.15s, transform 0.1s;
 }
 
-.btn:active { transform: scale(0.97); }
-
-.btn-secondary {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.btn-secondary:hover { background: #e4e4e4; }
-
-.btn-whatsapp {
-  background: #25d366;
-  color: #fff;
-}
-
-.btn-whatsapp:hover { background: #1ebe5d; }
+.btn-copy:hover { background: #c62828; }
+.btn-copy:active { transform: scale(0.97); }
 
 /* ── Copy feedback ── */
 .copy-feedback {
@@ -271,7 +344,7 @@ body {
   color: #2e7d32;
   font-size: 12px;
   font-weight: 500;
-  margin-top: 6px;
+  margin-top: 8px;
   animation: fadeIn 0.2s ease;
 }
 
@@ -284,18 +357,18 @@ body {
 .footer {
   padding: 8px 14px;
   text-align: center;
+  border-top: 1px solid #f0f0f0;
 }
 
 .footer-link {
   background: none;
   border: none;
-  color: #e53935;
+  color: #888;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 500;
   padding: 2px;
   transition: color 0.15s;
 }
 
-.footer-link:hover { color: #c62828; text-decoration: underline; }
+.footer-link:hover { color: #e53935; }

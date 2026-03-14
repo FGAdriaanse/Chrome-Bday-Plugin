@@ -13,40 +13,55 @@
     <button id="settingsBtn" class="icon-btn" title="Open Settings">⚙️</button>
   </div>
 
-  <!-- Today's Birthdays -->
-  <div class="section">
-    <div class="section-label">Today's Birthdays</div>
-    <div id="birthdayList"></div>
-    <div id="noBirthdays" class="empty-state" style="display:none">
-      🎈 No birthdays today — check back tomorrow!
+  <!-- View toggle -->
+  <div class="view-toggle">
+    <button id="btnViewToday" class="view-btn active">Today <span id="todayBadge" class="today-badge" style="display:none"></span></button>
+    <button id="btnViewAll" class="view-btn">All Contacts</button>
+  </div>
+
+  <!-- ── VIEW: Today ── -->
+  <div id="viewToday">
+    <div class="section">
+      <div id="birthdayList"></div>
+      <div id="noBirthdays" class="empty-state" style="display:none">
+        🎈 No birthdays today — check back tomorrow!
+      </div>
+    </div>
+
+    <!-- Message Composer (starred contacts only, shown on demand) -->
+    <div id="composer" class="section composer" style="display:none">
+      <div class="section-label">
+        Copy Birthday Message
+        <button id="closeComposer" class="close-btn" title="Close">✕</button>
+      </div>
+      <div class="composer-for">For: <strong id="composerName"></strong></div>
+      <div class="composer-row">
+        <label>Language</label>
+        <select id="msgLang">
+          <option value="english">🇬🇧 English</option>
+          <option value="afrikaans">🇿🇦 Afrikaans</option>
+        </select>
+      </div>
+      <div class="msg-list" id="msgList"></div>
+      <div id="msgPreview" class="msg-preview"></div>
+      <button id="copyMsgBtn" class="btn btn-copy">📋 Copy Message</button>
+      <div id="copyFeedback" class="copy-feedback" style="display:none">✅ Copied! Paste it into WhatsApp.</div>
     </div>
   </div>
 
-  <!-- WhatsApp Message Composer (shown when 💬 clicked) -->
-  <div id="waComposer" class="section composer" style="display:none">
-    <div class="section-label">
-      Send WhatsApp Message
-      <button id="closeComposer" class="close-btn" title="Close">✕</button>
+  <!-- ── VIEW: All Contacts ── -->
+  <div id="viewAll" style="display:none">
+    <div class="section">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name…" />
+      <div id="allContactsList"></div>
+      <div id="noContacts" class="empty-state" style="display:none">
+        No contacts yet. Go to Settings to import or add some.
+      </div>
     </div>
-    <div class="composer-for">For: <strong id="composerName"></strong></div>
-    <div class="composer-row">
-      <label>Language</label>
-      <select id="msgLang">
-        <option value="english">🇬🇧 English</option>
-        <option value="afrikaans">🇿🇦 Afrikaans</option>
-      </select>
-    </div>
-    <div class="msg-list" id="msgList"></div>
-    <div id="msgPreview" class="msg-preview"></div>
-    <div class="btn-row">
-      <button id="copyMsgBtn" class="btn btn-secondary">📋 Copy Message</button>
-      <button id="openWaBtn" class="btn btn-whatsapp">💬 Open WhatsApp Web</button>
-    </div>
-    <div id="copyFeedback" class="copy-feedback" style="display:none">✅ Copied to clipboard!</div>
   </div>
 
   <div class="footer">
-    <button id="manageBtn" class="footer-link">Manage Birthdays →</button>
+    <button id="manageBtn" class="footer-link">⚙️ Manage Birthdays &amp; Messages</button>
   </div>
 
   <script src="popup.js"></script>
