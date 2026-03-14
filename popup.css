@@ -178,6 +178,32 @@ body {
   flex: 1;
 }
 
+/* ── Language toggle ─────────────────────────────────────── */
+.lang-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.lang-btn {
+  flex: 1;
+  background: #f0f0f0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 6px;
+  color: #777;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.lang-btn:hover { background: #e4e4e4; color: #444; }
+.lang-btn.active {
+  background: #e8f0fe;
+  border-color: #1976d2;
+  color: #1565c0;
+}
+
 /* ── AI section ──────────────────────────────────────────── */
 .ai-spinner {
   display: flex; align-items: center; gap: 10px;
@@ -281,6 +307,14 @@ body {
 
 .btn-primary { background: #1976d2; color: #fff; flex: 1; }
 .btn-primary:hover { background: #1565c0; }
+
+.btn-outline {
+  background: #fff;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  flex: 1;
+}
+.btn-outline:hover { background: #e8f0fe; }
 
 .btn-ghost {
   background: #f0f0f0; color: #555;

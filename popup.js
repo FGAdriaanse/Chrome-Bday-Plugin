@@ -19,6 +19,7 @@ let isLoadingBottom = false;
 
 let composerContact   = null;
 let composerGenerated = '';
+let composerLang      = 'afrikaans'; // 'afrikaans' | 'english'
 let selectedTplIndex  = 0;
 let currentMainView   = 'today'; // 'today' | 'all'
 
@@ -305,19 +306,25 @@ function closeComposer() {
 }
 
 async function triggerGenerate() {
-  const spinner  = document.getElementById('aiSpinner');
-  const wrap     = document.getElementById('aiMessageWrap');
-  const errEl    = document.getElementById('aiError');
-  const regenBtn = document.getElementById('regenBtn');
-  const copyBtn  = document.getElementById('copyAiBtn');
+  const spinner     = document.getElementById('aiSpinner');
+  const spinnerText = document.getElementById('aiSpinnerText');
+  const wrap        = document.getElementById('aiMessageWrap');
+  const errEl       = document.getElementById('aiError');
+  const regenBtn    = document.getElementById('regenBtn');
+  const copyBtn     = document.getElementById('copyAiBtn');
+  const saveBtn     = document.getElementById('saveMemoryBtn');
+
+  spinnerText.textContent = composerLang === 'afrikaans'
+    ? 'Boodskap word gegenereer…'
+    : 'Generating message…';
 
   spinner.style.display = 'flex';
   wrap.style.display    = 'none';
   errEl.style.display   = 'none';
-  regenBtn.disabled = copyBtn.disabled = true;
+  regenBtn.disabled = copyBtn.disabled = saveBtn.disabled = true;
 
   try {
-    const msg = await generateAIMessage(composerContact.name);
+    const msg = await generateAIMessage(composerContact.name, composerLang);
     composerGenerated = msg;
     document.getElementById('aiMessage').value = msg;
     wrap.style.display = 'block';
@@ -329,7 +336,7 @@ async function triggerGenerate() {
     wrap.style.display  = 'block';
   } finally {
     spinner.style.display = 'none';
-    regenBtn.disabled = copyBtn.disabled = false;
+    regenBtn.disabled = copyBtn.disabled = saveBtn.disabled = false;
   }
 }
 
@@ -361,16 +368,32 @@ function renderTemplateList() {
 }
 
 // ── AI generation ─────────────────────────────────────────────────────────────
-async function generateAIMessage(name) {
+async function generateAIMessage(name, lang = 'afrikaans') {
   if (!apiKey) throw new Error('NO_API_KEY');
 
   const examples = [...toneHistory].reverse().slice(0, TONE_MEMORY);
+  const isAF     = lang === 'afrikaans';
 
-  let prompt = `Skryf 'n verjaardagboodskap in Afrikaans met emojis vir ${name}.`;
+  let system, prompt;
+
+  if (isAF) {
+    system = "Jy skryf verjaardagboodskappe in Afrikaans. Hou dit warm, opreg en persoonlik — 2 tot 3 sinne. Gebruik gepaste emojis. Gee slegs die boodskapsteks terug, niks anders nie.";
+    prompt = `Skryf 'n verjaardagboodskap in Afrikaans met emojis vir ${name}.`;
+  } else {
+    system = "You write birthday messages in English. Keep them warm, sincere and personal — 2 to 3 sentences. Use fitting emojis. Return only the message text, nothing else.";
+    prompt = `Write a birthday message in English with emojis for ${name}.`;
+  }
+
   if (examples.length > 0) {
-    prompt += '\n\nHier is voorbeelde van verjaardagboodskappe wat ek voorheen gestuur het — leer my toon en styl:';
+    const intro = isAF
+      ? '\n\nHier is voorbeelde van boodskappe wat ek voorheen gestuur het — leer my toon en styl:'
+      : '\n\nHere are examples of messages I have sent before — learn my tone and style:';
+    prompt += intro;
     examples.forEach((ex, i) => { prompt += `\n${i + 1}. "${ex.sent}"`; });
-    prompt += `\n\nSkryf nou 'n nuwe boodskap vir ${name} in my styl.`;
+    const outro = isAF
+      ? `\n\nSkryf nou 'n nuwe boodskap vir ${name} in my styl.`
+      : `\n\nNow write a new message for ${name} in my style.`;
+    prompt += outro;
   }
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -378,19 +401,20 @@ async function generateAIMessage(name) {
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'   // required for browser/extension context
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 250,
-      system: "Jy skryf verjaardagboodskappe in Afrikaans. Hou dit warm, opreg en persoonlik — 2 tot 3 sinne. Gebruik gepaste emojis. Gee slegs die boodskapsteks terug, niks anders nie.",
+      system,
       messages: [{ role: 'user', content: prompt }]
     })
   });
 
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API fout ${resp.status}`);
+    throw new Error(err.error?.message || `API error ${resp.status}`);
   }
   const data = await resp.json();
   return data.content[0].text.trim();
@@ -413,8 +437,9 @@ async function copyToClipboard(text) {
   }
 }
 
-function showCopyFeedback() {
+function showCopyFeedback(msg = '✅ Copied! Open WhatsApp and paste.') {
   const fb = document.getElementById('copyFeedback');
+  fb.textContent   = msg;
   fb.style.display = 'block';
   setTimeout(() => { fb.style.display = 'none'; }, 3500);
 }
@@ -450,17 +475,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Back button in composer
   document.getElementById('backBtn').addEventListener('click', closeComposer);
 
+  // Language toggle buttons
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.lang === composerLang) return;
+      composerLang = btn.dataset.lang;
+      document.querySelectorAll('.lang-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.lang === composerLang)
+      );
+      triggerGenerate();
+    });
+  });
+
   // Regenerate
   document.getElementById('regenBtn').addEventListener('click', triggerGenerate);
 
-  // Copy AI message
+  // Copy only (no save)
   document.getElementById('copyAiBtn').addEventListener('click', async () => {
     const text = document.getElementById('aiMessage').value.trim();
     if (!text) return;
     await copyToClipboard(text);
+    showCopyFeedback('✅ Copied! Open WhatsApp and paste.');
+  });
+
+  // Save to Memory (also copies so the user has it ready)
+  document.getElementById('saveMemoryBtn').addEventListener('click', async () => {
+    const text = document.getElementById('aiMessage').value.trim();
+    if (!text) return;
+    await copyToClipboard(text);
     await saveToneEdit(composerGenerated, text);
-    showCopyFeedback();
     updateToneNote();
+    showCopyFeedback('💾 Saved to memory + copied!');
   });
 
   // Template language change

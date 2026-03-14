@@ -62,21 +62,28 @@
       <!-- ── AI section (shown when API key is set) ── -->
       <div id="aiSection" style="display:none">
 
+        <!-- Language toggle -->
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang="afrikaans">🇿🇦 Afrikaans</button>
+          <button class="lang-btn" data-lang="english">🇬🇧 English</button>
+        </div>
+
         <div id="aiSpinner" class="ai-spinner" style="display:none">
           <span class="spinner"></span>
-          <span>Generating message in Afrikaans…</span>
+          <span id="aiSpinnerText">Generating message…</span>
         </div>
 
         <div id="aiMessageWrap" style="display:none">
-          <label class="field-label">Your message <span class="field-hint">(edit freely before copying)</span></label>
+          <label class="field-label">Your message <span class="field-hint">(edit freely — it's yours)</span></label>
           <textarea id="aiMessage" class="ai-textarea" rows="5"></textarea>
         </div>
 
         <div id="aiError" class="ai-error" style="display:none"></div>
 
         <div class="action-row">
-          <button id="regenBtn" class="btn btn-ghost">↻ Regenerate</button>
-          <button id="copyAiBtn" class="btn btn-primary">📋 Copy &amp; Save</button>
+          <button id="regenBtn" class="btn btn-ghost">↻ New</button>
+          <button id="copyAiBtn" class="btn btn-outline">📋 Copy</button>
+          <button id="saveMemoryBtn" class="btn btn-primary">💾 Save to Memory</button>
         </div>
 
         <div class="tone-note" id="toneNote"></div>
