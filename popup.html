@@ -9,83 +9,106 @@
 <body>
 
   <div class="header">
-    <span class="header-title">🎂 Birthday Buddy</span>
+    <span class="header-title">🎉 Birthday Buddy</span>
     <button id="settingsBtn" class="icon-btn" title="Open Settings">⚙️</button>
   </div>
 
-  <!-- View toggle -->
-  <div class="view-toggle">
+  <!-- View toggle (hidden when composer is open) -->
+  <div class="view-toggle" id="viewToggle">
     <button id="btnViewToday" class="view-btn active">
       Birthdays <span id="todayBadge" class="today-badge" style="display:none"></span>
     </button>
     <button id="btnViewAll" class="view-btn">All Contacts</button>
   </div>
 
-  <!-- ── VIEW: Birthdays (infinite scroll) ── -->
-  <div id="viewToday">
+  <!-- ═══════════════════════════════════════════════════════
+       PANEL A: Birthday scroll  (hidden when composer open)
+  ═══════════════════════════════════════════════════════ -->
+  <div id="birthdayPanel">
+
+    <!-- Infinite scroll -->
     <div id="dayScroll">
       <div id="topSentinel"></div>
-      <!-- day sections injected here by JS -->
+      <!-- day sections injected by JS -->
       <div id="bottomSentinel"></div>
     </div>
 
-    <!-- Message Composer (appears below scroll, starred contacts today only) -->
-    <div id="composer" class="composer" style="display:none">
-      <div class="composer-header">
-        <span class="composer-title">🎉 Birthday Message</span>
-        <div class="composer-meta">for <strong id="composerName"></strong></div>
-        <button id="closeComposer" class="close-btn" title="Close">✕</button>
+    <!-- All Contacts view (swaps with dayScroll) -->
+    <div id="allContactsPanel" style="display:none">
+      <div class="all-contacts-inner">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name…" />
+        <div id="allContactsList"></div>
+        <div id="noContacts" class="empty-state" style="display:none">
+          No contacts yet — import a CSV or add one in Settings.
+        </div>
       </div>
+    </div>
 
-      <!-- AI section (shown when API key is set) -->
+  </div><!-- /birthdayPanel -->
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       PANEL B: Message composer  (replaces birthday panel)
+  ═══════════════════════════════════════════════════════ -->
+  <div id="composerPanel" style="display:none">
+
+    <div class="composer-topbar">
+      <button id="backBtn" class="back-btn">← Back</button>
+      <div class="composer-who">🎉 <strong id="composerName"></strong>'s Birthday</div>
+    </div>
+
+    <div class="composer-body">
+
+      <!-- ── AI section (shown when API key is set) ── -->
       <div id="aiSection" style="display:none">
+
         <div id="aiSpinner" class="ai-spinner" style="display:none">
-          <span class="spinner"></span> Generating in Afrikaans…
+          <span class="spinner"></span>
+          <span>Generating message in Afrikaans…</span>
         </div>
-        <textarea id="aiMessage" class="ai-textarea" rows="4"
-          placeholder="Your AI-generated message will appear here…"></textarea>
+
+        <div id="aiMessageWrap" style="display:none">
+          <label class="field-label">Your message <span class="field-hint">(edit freely before copying)</span></label>
+          <textarea id="aiMessage" class="ai-textarea" rows="5"></textarea>
+        </div>
+
         <div id="aiError" class="ai-error" style="display:none"></div>
-        <div class="ai-hint">✏️ Edit the message above to your liking before copying.</div>
-        <div class="btn-row">
-          <button id="regenBtn" class="btn btn-regen">↻ Regenerate</button>
-          <button id="copyAiBtn" class="btn btn-copy">📋 Copy &amp; Save</button>
+
+        <div class="action-row">
+          <button id="regenBtn" class="btn btn-ghost">↻ Regenerate</button>
+          <button id="copyAiBtn" class="btn btn-primary">📋 Copy &amp; Save</button>
         </div>
+
+        <div class="tone-note" id="toneNote"></div>
       </div>
 
-      <!-- Template fallback (shown when no API key) -->
+      <!-- ── Template fallback (no API key) ── -->
       <div id="templateSection" style="display:none">
-        <div class="no-api-hint">
-          💡 <button id="goToApiKey" class="inline-link">Add an API key in Settings</button>
+        <div class="no-api-banner">
+          💡 Add an API key in
+          <button id="goToApiKey" class="inline-link">Settings → 🔑 API Key</button>
           to get AI-generated messages.
         </div>
-        <div class="composer-row">
-          <label>Language</label>
-          <select id="msgLang">
+        <div class="field-row">
+          <label class="field-label">Language</label>
+          <select id="msgLang" class="field-select">
             <option value="english">🇬🇧 English</option>
             <option value="afrikaans">🇿🇦 Afrikaans</option>
           </select>
         </div>
         <div class="msg-list" id="msgList"></div>
         <div id="msgPreview" class="msg-preview"></div>
-        <button id="copyTplBtn" class="btn btn-copy">📋 Copy Message</button>
+        <button id="copyTplBtn" class="btn btn-primary" style="width:100%">📋 Copy Message</button>
       </div>
 
-      <div id="copyFeedback" class="copy-feedback" style="display:none">
-        ✅ Copied! Paste it into WhatsApp.
-      </div>
-    </div>
-  </div>
+    </div><!-- /composer-body -->
 
-  <!-- ── VIEW: All Contacts ── -->
-  <div id="viewAll" style="display:none">
-    <div class="all-contacts-section">
-      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name…" />
-      <div id="allContactsList"></div>
-      <div id="noContacts" class="empty-state" style="display:none">
-        No contacts yet. Go to Settings to import or add some.
-      </div>
+    <div id="copyFeedback" class="copy-feedback" style="display:none">
+      ✅ Copied! Open WhatsApp and paste.
     </div>
-  </div>
+
+  </div><!-- /composerPanel -->
+
 
   <div class="footer">
     <button id="manageBtn" class="footer-link">⚙️ Manage Birthdays &amp; Messages</button>
