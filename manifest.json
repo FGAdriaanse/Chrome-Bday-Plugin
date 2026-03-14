@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Never miss a birthday! Daily notifications, WhatsApp message helper, and easy contact management.",
   "permissions": ["storage", "notifications", "alarms"],
+  "host_permissions": ["https://api.anthropic.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

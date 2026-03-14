@@ -18,6 +18,7 @@
     <button class="tab" data-tab="add">➕ Add Birthday</button>
     <button class="tab" data-tab="contacts">👥 All Contacts</button>
     <button class="tab" data-tab="messages">💬 Messages</button>
+    <button class="tab" data-tab="apikey">🔑 API Key</button>
   </nav>
 
   <!-- ── TAB: Import CSV ── -->
@@ -130,6 +131,56 @@
       <button id="addMsgBtn" class="btn btn-primary">➕ Add Message</button>
     </div>
     <div id="msgFeedback" class="feedback" style="display:none"></div>
+  </div>
+
+  <!-- ── TAB: API Key ── -->
+  <div id="tab-apikey" class="tab-content">
+    <h2>🔑 Anthropic API Key</h2>
+    <p class="hint">
+      The AI birthday message feature uses Claude to write personalised Afrikaans messages.
+      You need a free Anthropic API key to enable it.
+    </p>
+
+    <div class="api-steps">
+      <div class="api-step">
+        <span class="step-num">1</span>
+        <span>Go to <strong>console.anthropic.com</strong> and sign up for a free account.</span>
+      </div>
+      <div class="api-step">
+        <span class="step-num">2</span>
+        <span>Click <strong>API Keys</strong> in the left sidebar, then <strong>Create Key</strong>.</span>
+      </div>
+      <div class="api-step">
+        <span class="step-num">3</span>
+        <span>Copy the key (starts with <code>sk-ant-</code>) and paste it below.</span>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:20px">
+      <label for="apiKeyInput">Your API Key</label>
+      <div class="api-key-row">
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" />
+        <button id="toggleApiKeyVisibility" class="btn btn-secondary" style="flex:0 0 auto;padding:9px 12px">👁</button>
+      </div>
+      <span class="hint-inline">Stored only on your device. Never shared with anyone except Anthropic's servers when generating messages.</span>
+    </div>
+
+    <div class="btn-row">
+      <button id="saveApiKeyBtn" class="btn btn-primary">💾 Save Key</button>
+      <button id="clearApiKeyBtn" class="btn btn-secondary">🗑 Remove Key</button>
+    </div>
+    <div id="apiKeyFeedback" class="feedback" style="display:none"></div>
+
+    <div class="tone-history-section">
+      <h3>Message Tone History</h3>
+      <p class="hint">
+        Every message you copy and save teaches the AI your tone.
+        The last <strong>10 messages</strong> are used as style examples.
+      </p>
+      <div id="toneHistoryCount" class="tone-count"></div>
+      <button id="clearToneBtn" class="btn btn-secondary" style="margin-top:8px">🗑 Clear Tone History</button>
+      <div id="toneFeedback" class="feedback" style="display:none"></div>
+    </div>
   </div>
 
   <script src="options.js"></script>

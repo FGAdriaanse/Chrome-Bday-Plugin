@@ -424,6 +424,9 @@ function initTabs() {
       if (tab.dataset.tab === 'messages') {
         renderMsgEditor();
       }
+      if (tab.dataset.tab === 'apikey') {
+        loadApiKeyTab();
+      }
     });
   });
 }
@@ -454,5 +457,65 @@ document.addEventListener('DOMContentLoaded', async () => {
   initAddTab();
   initContactsTab();
   initMessagesTab();
+  initApiKeyTab();
   updateContactCount();
 });
+
+// ── API Key Tab ───────────────────────────────────────────────────────────────
+
+async function loadApiKeyTab() {
+  const data = await chrome.storage.local.get(['apiKey', 'toneHistory']);
+  const key  = data.apiKey || '';
+  const tone = data.toneHistory || [];
+
+  const input = document.getElementById('apiKeyInput');
+  if (input) input.value = key;
+
+  const countEl = document.getElementById('toneHistoryCount');
+  if (countEl) {
+    countEl.textContent = tone.length === 0
+      ? 'No messages saved yet. Start copying messages from the popup to build your tone profile.'
+      : `${tone.length} message${tone.length === 1 ? '' : 's'} saved. The AI will use ${Math.min(tone.length, 10)} of them as style examples.`;
+  }
+}
+
+function initApiKeyTab() {
+  // Toggle key visibility
+  document.getElementById('toggleApiKeyVisibility').addEventListener('click', () => {
+    const input = document.getElementById('apiKeyInput');
+    input.type  = input.type === 'password' ? 'text' : 'password';
+  });
+
+  // Save key
+  document.getElementById('saveApiKeyBtn').addEventListener('click', async () => {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    const fb  = document.getElementById('apiKeyFeedback');
+    if (!val) {
+      showFeedback(fb, '⚠ Please paste your API key first.', 'error');
+      return;
+    }
+    if (!val.startsWith('sk-ant-')) {
+      showFeedback(fb, '⚠ That doesn\'t look like an Anthropic key (should start with sk-ant-).', 'error');
+      return;
+    }
+    await chrome.storage.local.set({ apiKey: val });
+    showFeedback(fb, '✅ API key saved! AI messages are now enabled.', 'success');
+  });
+
+  // Clear key
+  document.getElementById('clearApiKeyBtn').addEventListener('click', async () => {
+    await chrome.storage.local.remove('apiKey');
+    document.getElementById('apiKeyInput').value = '';
+    showFeedback(document.getElementById('apiKeyFeedback'), '🗑 API key removed.', 'success');
+  });
+
+  // Clear tone history
+  document.getElementById('clearToneBtn').addEventListener('click', async () => {
+    if (!confirm('Clear all saved tone examples? The AI will start fresh.')) return;
+    await chrome.storage.local.remove('toneHistory');
+    showFeedback(document.getElementById('toneFeedback'), '🗑 Tone history cleared.', 'success');
+    loadApiKeyTab();
+  });
+
+  loadApiKeyTab();
+}

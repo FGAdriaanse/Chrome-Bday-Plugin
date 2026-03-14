@@ -1,71 +1,57 @@
 // Birthday Buddy - Popup Script
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const BATCH_SIZE  = 14;  // days loaded per scroll batch
+const INITIAL_PAST   = 3;   // days before today on first load
+const INITIAL_FUTURE = 10;  // days after today on first load
+const TONE_MEMORY = 10;     // how many past sent messages to feed to AI
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let allContacts  = [];
+let allMessages  = { english: [], afrikaans: [] };
+let apiKey       = '';
+let toneHistory  = [];  // [{ generated, sent, timestamp }]
+
+// Infinite scroll range (offsets from today)
+let startOffset = -INITIAL_PAST;
+let endOffset   = INITIAL_FUTURE;
+let isLoadingTop    = false;
+let isLoadingBottom = false;
+
+// Composer state
+let composerContact   = null;
+let composerGenerated = '';  // original AI output before user edits
+let selectedTplIndex  = 0;
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
 function parseBirthdate(birthdate) {
   if (!birthdate) return null;
-  const parts = birthdate.split('/');
-  if (parts.length < 3) return null;
-  const year  = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const day   = parseInt(parts[2], 10);
+  const p = birthdate.split('/');
+  if (p.length < 3) return null;
+  const year = parseInt(p[0], 10), month = parseInt(p[1], 10), day = parseInt(p[2], 10);
   if (isNaN(month) || isNaN(day)) return null;
   return { year: isNaN(year) ? null : year, month, day };
 }
 
-function birthdaysOnDate(contacts, date) {
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  return contacts.filter(c => {
+function birthdaysOnDate(date) {
+  const m = date.getMonth() + 1, d = date.getDate();
+  return allContacts.filter(c => {
     const p = parseBirthdate(c.birthdate);
     return p && p.month === m && p.day === d;
   });
 }
 
 function calcAge(year, onDate) {
-  if (!year) return null;
-  return onDate.getFullYear() - year;
+  return year ? onDate.getFullYear() - year : null;
 }
 
-function formatMessage(template, name) {
-  return template.replace(/\{name\}/g, name);
-}
-
-function formatShortDate(birthdate) {
-  if (!birthdate) return '';
-  const parts = birthdate.split('/');
-  if (parts.length < 3) return birthdate;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const m = parseInt(parts[1], 10) - 1;
-  const d = parseInt(parts[2], 10);
-  return `${months[m] || '?'} ${d}`;
-}
-
-function isSameDay(date, contact) {
-  const p = parseBirthdate(contact.birthdate);
-  if (!p) return false;
-  return p.month === date.getMonth() + 1 && p.day === date.getDate();
-}
-
-// ── State ─────────────────────────────────────────────────────────────────────
-
-let allContacts = [];
-let allMessages = { english: [], afrikaans: [] };
-let selectedMsgIndex = 0;
-let composerContact  = null;
-
-// ── Multi-day scroll ──────────────────────────────────────────────────────────
-
-// Days to show: -1 (yesterday), 0 (today), +1 (tomorrow), +2 (day after)
-const DAY_OFFSETS = [-1, 0, 1, 2];
-
-function dayLabel(offset) {
-  switch (offset) {
-    case -1: return { text: 'Yesterday', cls: 'past' };
-    case  0: return { text: 'Today',     cls: 'today' };
-    case  1: return { text: 'Tomorrow',  cls: '' };
-    case  2: return { text: 'Day After Tomorrow', cls: '' };
-  }
+function offsetToDate(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d;
 }
 
 function formatHeaderDate(date) {
@@ -74,52 +60,54 @@ function formatHeaderDate(date) {
   return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
 }
 
-function renderDayScroll() {
-  const container = document.getElementById('dayScroll');
-  container.innerHTML = '';
+function formatShortDate(birthdate) {
+  if (!birthdate) return '';
+  const p = birthdate.split('/');
+  if (p.length < 3) return birthdate;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(p[1], 10) - 1] || '?'} ${parseInt(p[2], 10)}`;
+}
 
-  const base = new Date();
+function isTodayBirthday(contact) {
+  const today = new Date();
+  return birthdaysOnDate(today).some(c => c.id === contact.id);
+}
 
-  DAY_OFFSETS.forEach(offset => {
-    const date = new Date(base);
-    date.setDate(base.getDate() + offset);
+// ── Day section builder ────────────────────────────────────────────────────────
 
-    const birthdays = birthdaysOnDate(allContacts, date);
-    const { text, cls } = dayLabel(offset);
+function buildDaySection(offset) {
+  const date  = offsetToDate(offset);
+  const bdays = birthdaysOnDate(date);
 
-    const section = document.createElement('div');
-    section.className = 'day-section';
-    if (offset === 0) section.id = 'dayToday';
+  const section = document.createElement('div');
+  section.className = 'day-section';
+  section.dataset.offset = offset;
+  if (offset === 0) section.id = 'dayToday';
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'day-header';
-    header.innerHTML = `
-      <span class="day-label ${cls}">${text}</span>
-      <span class="day-date">${formatHeaderDate(date)}</span>
-    `;
-    section.appendChild(header);
+  // Header
+  let labelText, labelCls;
+  if (offset === -1)     { labelText = 'Yesterday'; labelCls = 'past'; }
+  else if (offset === 0) { labelText = 'Today';     labelCls = 'today'; }
+  else if (offset === 1) { labelText = 'Tomorrow';  labelCls = ''; }
+  else if (offset > 1)   { labelText = `+${offset} days`; labelCls = ''; }
+  else                   { labelText = `${Math.abs(offset)} days ago`; labelCls = 'past'; }
 
-    if (birthdays.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'day-empty';
-      empty.textContent = 'No birthdays';
-      section.appendChild(empty);
-    } else {
-      birthdays.forEach(contact => {
-        section.appendChild(buildBirthdayItem(contact, date, offset));
-      });
-    }
+  const header = document.createElement('div');
+  header.className = 'day-header';
+  header.innerHTML = `<span class="day-label ${labelCls}">${labelText}</span>
+                      <span class="day-date">${formatHeaderDate(date)}</span>`;
+  section.appendChild(header);
 
-    container.appendChild(section);
-  });
-
-  // Scroll Today into view (it's the second section)
-  const todayEl = document.getElementById('dayToday');
-  if (todayEl) {
-    // Use scrollTop on the container so Yesterday is still reachable by scrolling up
-    todayEl.scrollIntoView({ block: 'start' });
+  if (bdays.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'day-empty';
+    empty.textContent = 'No birthdays';
+    section.appendChild(empty);
+  } else {
+    bdays.forEach(contact => section.appendChild(buildBirthdayItem(contact, date, offset)));
   }
+
+  return section;
 }
 
 function buildBirthdayItem(contact, date, offset) {
@@ -128,17 +116,17 @@ function buildBirthdayItem(contact, date, offset) {
 
   const item = document.createElement('div');
   item.className = 'birthday-item';
+  item.dataset.contactId = contact.id;
 
-  // Star toggle
+  // Star button
   const starBtn = document.createElement('button');
   starBtn.className = 'star-btn';
-  starBtn.title = contact.starred ? 'Remove VIP star' : 'Star to enable message copy';
+  starBtn.title = contact.starred ? 'Remove star' : 'Star to enable message copy';
   starBtn.textContent = contact.starred ? '⭐' : '☆';
   starBtn.addEventListener('click', async () => {
     await toggleStar(contact.id);
-    const updated = allContacts.find(c => c.id === contact.id);
-    if (updated && !updated.starred) closeComposer();
-    renderDayScroll();
+    refreshDaySection(offset);
+    if (!allContacts.find(c => c.id === contact.id)?.starred) closeComposer();
   });
 
   // Info
@@ -154,86 +142,94 @@ function buildBirthdayItem(contact, date, offset) {
     const ageEl = document.createElement('div');
     ageEl.className = 'birthday-age';
     const verb = offset < 0 ? 'Turned' : offset === 0 ? 'Turning' : 'Turns';
-    ageEl.textContent = `${verb} ${age} ${offset === 0 ? 'today 🎂' : ''}`;
+    ageEl.textContent = `${verb} ${age}${offset === 0 ? ' today 🎂' : ''}`;
     info.appendChild(ageEl);
   }
 
   item.appendChild(starBtn);
   item.appendChild(info);
 
-  // Copy message button — today's starred contacts only
+  // Copy message button: only for today's starred contacts
   if (offset === 0 && contact.starred) {
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.textContent = '📋 Copy Msg';
-    copyBtn.title = 'Pick and copy a birthday message';
-    copyBtn.addEventListener('click', () => openComposer(contact));
-    item.appendChild(copyBtn);
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = '📋 Copy Msg';
+    btn.addEventListener('click', () => openComposer(contact));
+    item.appendChild(btn);
   }
 
   return item;
 }
 
-// ── All Contacts list ─────────────────────────────────────────────────────────
+// Re-render a single day's section without disturbing scroll position
+function refreshDaySection(offset) {
+  const scroll   = document.getElementById('dayScroll');
+  const existing = scroll.querySelector(`.day-section[data-offset="${offset}"]`);
+  if (!existing) return;
+  const fresh = buildDaySection(offset);
+  scroll.replaceChild(fresh, existing);
+}
 
-function renderAllContacts(filter = '') {
-  const list    = document.getElementById('allContactsList');
-  const emptyEl = document.getElementById('noContacts');
-  list.innerHTML = '';
+// ── Infinite scroll ───────────────────────────────────────────────────────────
 
-  const today = new Date();
-  const q = filter.toLowerCase();
-  const filtered = q
-    ? allContacts.filter(c => c.name.toLowerCase().includes(q))
-    : [...allContacts];
+function initInfiniteScroll() {
+  const scroll = document.getElementById('dayScroll');
+  const top    = document.getElementById('topSentinel');
+  const bottom = document.getElementById('bottomSentinel');
 
-  filtered.sort((a, b) => {
-    if (a.starred && !b.starred) return -1;
-    if (!a.starred && b.starred) return 1;
-    return a.name.localeCompare(b.name);
-  });
-
-  if (filtered.length === 0) {
-    emptyEl.style.display = 'block';
-    return;
+  // Render initial batch
+  const frag = document.createDocumentFragment();
+  for (let i = startOffset; i <= endOffset; i++) {
+    frag.appendChild(buildDaySection(i));
   }
-  emptyEl.style.display = 'none';
+  // Insert between sentinels
+  scroll.insertBefore(frag, bottom);
 
-  filtered.forEach(contact => {
-    const item = document.createElement('div');
-    item.className = 'contact-item';
-
-    const starBtn = document.createElement('button');
-    starBtn.className = 'star-btn';
-    starBtn.title = contact.starred ? 'Remove VIP star' : 'Star for birthday messages';
-    starBtn.textContent = contact.starred ? '⭐' : '☆';
-    starBtn.addEventListener('click', async () => {
-      await toggleStar(contact.id);
-      renderAllContacts(document.getElementById('searchInput').value);
-    });
-
-    const info = document.createElement('div');
-    info.className = 'contact-info';
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'contact-name';
-    nameEl.textContent = contact.name;
-    info.appendChild(nameEl);
-
-    const dateEl = document.createElement('div');
-    if (isSameDay(today, contact)) {
-      dateEl.className = 'contact-bday-today';
-      dateEl.textContent = '🎂 Birthday today!';
-    } else {
-      dateEl.className = 'contact-date';
-      dateEl.textContent = formatShortDate(contact.birthdate);
-    }
-    info.appendChild(dateEl);
-
-    item.appendChild(starBtn);
-    item.appendChild(info);
-    list.appendChild(item);
+  // Scroll Today into view (offset 0 section)
+  requestAnimationFrame(() => {
+    const todayEl = document.getElementById('dayToday');
+    if (todayEl) scroll.scrollTop = todayEl.offsetTop - 4;
   });
+
+  // Observer
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      if (entry.target === top    && !isLoadingTop)    loadMoreDays('top',    scroll, top, bottom);
+      if (entry.target === bottom && !isLoadingBottom) loadMoreDays('bottom', scroll, top, bottom);
+    });
+  }, { root: scroll, rootMargin: '80px', threshold: 0 });
+
+  observer.observe(top);
+  observer.observe(bottom);
+}
+
+function loadMoreDays(direction, scroll, top, bottom) {
+  if (direction === 'top') {
+    isLoadingTop = true;
+    const prevHeight = scroll.scrollHeight;
+    const prevTop    = scroll.scrollTop;
+
+    const frag = document.createDocumentFragment();
+    for (let i = startOffset - BATCH_SIZE; i < startOffset; i++) {
+      frag.appendChild(buildDaySection(i));
+    }
+    startOffset -= BATCH_SIZE;
+    scroll.insertBefore(frag, top.nextSibling);
+
+    // Restore scroll position so the view doesn't jump
+    scroll.scrollTop = prevTop + (scroll.scrollHeight - prevHeight);
+    isLoadingTop = false;
+  } else {
+    isLoadingBottom = true;
+    const frag = document.createDocumentFragment();
+    for (let i = endOffset + 1; i <= endOffset + BATCH_SIZE; i++) {
+      frag.appendChild(buildDaySection(i));
+    }
+    endOffset += BATCH_SIZE;
+    scroll.insertBefore(frag, bottom);
+    isLoadingBottom = false;
+  }
 }
 
 // ── Star toggle ───────────────────────────────────────────────────────────────
@@ -245,50 +241,198 @@ async function toggleStar(contactId) {
   await chrome.storage.local.set({ contacts: allContacts });
 }
 
+// ── AI message generation ─────────────────────────────────────────────────────
+
+async function generateAIMessage(name) {
+  if (!apiKey) throw new Error('NO_API_KEY');
+
+  // Build style examples from tone history (most recent first)
+  const examples = [...toneHistory].reverse().slice(0, TONE_MEMORY);
+
+  let userContent = `Skryf 'n verjaardagboodskap in Afrikaans met emojis vir ${name}.`;
+
+  if (examples.length > 0) {
+    userContent += '\n\nHier is voorbeelde van verjaardagboodskappe wat ek voorheen gestuur het — leer my toon en styl:';
+    examples.forEach((ex, i) => {
+      userContent += `\n${i + 1}. "${ex.sent}"`;
+    });
+    userContent += `\n\nSkryf nou 'n nuwe boodskap vir ${name} in my styl.`;
+  }
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 250,
+      system: 'Jy is \'n verjaardagboodskap-skrywer. Skryf warm, persoonlike verjaardagboodskappe in Afrikaans met relevante emojis. Hou boodskappe tot 2-3 sinne. Wees opreg en hartlik. Gee net die boodskapsteks terug, niks anders nie.',
+      messages: [{ role: 'user', content: userContent }]
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  return data.content[0].text.trim();
+}
+
+async function saveToneEdit(generated, sent) {
+  // Save whether edited or not — both contribute to tone profile
+  toneHistory.push({ generated, sent, timestamp: Date.now() });
+  // Keep last 10
+  if (toneHistory.length > TONE_MEMORY) toneHistory = toneHistory.slice(-TONE_MEMORY);
+  await chrome.storage.local.set({ toneHistory });
+}
+
 // ── Message Composer ──────────────────────────────────────────────────────────
 
-function openComposer(contact) {
-  composerContact  = contact;
-  selectedMsgIndex = 0;
-  document.getElementById('composerName').textContent = contact.name;
-  document.getElementById('composer').style.display   = 'block';
-  document.getElementById('copyFeedback').style.display = 'none';
-  renderMsgList();
+async function openComposer(contact) {
+  composerContact   = contact;
+  composerGenerated = '';
+  selectedTplIndex  = 0;
+
+  document.getElementById('composerName').textContent    = contact.name;
+  document.getElementById('composer').style.display      = 'block';
+  document.getElementById('copyFeedback').style.display  = 'none';
+  document.getElementById('aiError').style.display       = 'none';
+
+  if (apiKey) {
+    // Show AI section
+    document.getElementById('aiSection').style.display       = 'block';
+    document.getElementById('templateSection').style.display = 'none';
+    await triggerGenerate();
+  } else {
+    // Show template fallback
+    document.getElementById('aiSection').style.display       = 'none';
+    document.getElementById('templateSection').style.display = 'block';
+    renderTemplateList();
+  }
+}
+
+async function triggerGenerate() {
+  const spinner  = document.getElementById('aiSpinner');
+  const textarea = document.getElementById('aiMessage');
+  const errEl    = document.getElementById('aiError');
+  const regenBtn = document.getElementById('regenBtn');
+  const copyBtn  = document.getElementById('copyAiBtn');
+
+  spinner.style.display  = 'flex';
+  textarea.style.display = 'none';
+  errEl.style.display    = 'none';
+  regenBtn.disabled = true;
+  copyBtn.disabled  = true;
+
+  try {
+    const msg = await generateAIMessage(composerContact.name);
+    composerGenerated    = msg;
+    textarea.value       = msg;
+    textarea.style.display = 'block';
+  } catch (err) {
+    errEl.textContent   = err.message === 'NO_API_KEY'
+      ? '⚠ No API key set. Go to Settings → API Key.'
+      : `⚠ ${err.message}`;
+    errEl.style.display = 'block';
+    textarea.style.display = 'block';
+  } finally {
+    spinner.style.display = 'none';
+    regenBtn.disabled = false;
+    copyBtn.disabled  = false;
+  }
 }
 
 function closeComposer() {
-  document.getElementById('composer').style.display = 'none';
+  document.getElementById('composer').style.display     = 'none';
   document.getElementById('copyFeedback').style.display = 'none';
   composerContact = null;
 }
 
-function renderMsgList() {
+// Template fallback rendering
+function renderTemplateList() {
   if (!composerContact) return;
   const lang      = document.getElementById('msgLang').value;
   const templates = allMessages[lang] || [];
-  const msgList   = document.getElementById('msgList');
-  msgList.innerHTML = '';
+  const list      = document.getElementById('msgList');
+  list.innerHTML  = '';
 
   templates.forEach((tmpl, i) => {
     const btn = document.createElement('button');
-    btn.className = 'msg-option' + (i === selectedMsgIndex ? ' selected' : '');
-    btn.textContent = formatMessage(tmpl, composerContact.name);
-    btn.addEventListener('click', () => { selectedMsgIndex = i; renderMsgList(); });
-    msgList.appendChild(btn);
+    btn.className   = 'msg-option' + (i === selectedTplIndex ? ' selected' : '');
+    btn.textContent = tmpl.replace(/\{name\}/g, composerContact.name);
+    btn.addEventListener('click', () => { selectedTplIndex = i; renderTemplateList(); });
+    list.appendChild(btn);
   });
 
-  updatePreview();
+  const tpl     = templates[selectedTplIndex] || '';
+  const preview = document.getElementById('msgPreview');
+  if (preview) preview.textContent = tpl.replace(/\{name\}/g, composerContact.name);
 }
 
-function updatePreview() {
-  if (!composerContact) return;
-  const lang      = document.getElementById('msgLang').value;
-  const templates = allMessages[lang] || [];
-  const tmpl      = templates[selectedMsgIndex] || '';
-  document.getElementById('msgPreview').textContent = formatMessage(tmpl, composerContact.name);
+// ── All Contacts view ─────────────────────────────────────────────────────────
+
+function renderAllContacts(filter = '') {
+  const list    = document.getElementById('allContactsList');
+  const emptyEl = document.getElementById('noContacts');
+  list.innerHTML = '';
+
+  const q        = filter.toLowerCase();
+  const filtered = q
+    ? allContacts.filter(c => c.name.toLowerCase().includes(q))
+    : [...allContacts];
+
+  filtered.sort((a, b) => {
+    if (a.starred && !b.starred) return -1;
+    if (!a.starred && b.starred) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  if (filtered.length === 0) { emptyEl.style.display = 'block'; return; }
+  emptyEl.style.display = 'none';
+
+  filtered.forEach(contact => {
+    const item = document.createElement('div');
+    item.className = 'contact-item';
+
+    const starBtn = document.createElement('button');
+    starBtn.className = 'star-btn';
+    starBtn.title     = contact.starred ? 'Remove star' : 'Star for message copy';
+    starBtn.textContent = contact.starred ? '⭐' : '☆';
+    starBtn.addEventListener('click', async () => {
+      await toggleStar(contact.id);
+      renderAllContacts(document.getElementById('searchInput').value);
+    });
+
+    const info   = document.createElement('div');
+    info.className = 'contact-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'contact-name';
+    nameEl.textContent = contact.name;
+    info.appendChild(nameEl);
+
+    const dateEl = document.createElement('div');
+    if (isTodayBirthday(contact)) {
+      dateEl.className   = 'contact-bday-today';
+      dateEl.textContent = '🎂 Birthday today!';
+    } else {
+      dateEl.className   = 'contact-date';
+      dateEl.textContent = formatShortDate(contact.birthdate);
+    }
+    info.appendChild(dateEl);
+
+    item.appendChild(starBtn);
+    item.appendChild(info);
+    list.appendChild(item);
+  });
 }
 
-// ── View switching ────────────────────────────────────────────────────────────
+// ── View switching ─────────────────────────────────────────────────────────────
 
 function showView(view) {
   document.getElementById('viewToday').style.display = view === 'today' ? 'block' : 'none';
@@ -301,62 +445,88 @@ function showView(view) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const data = await chrome.storage.local.get(['contacts', 'messages']);
-  allContacts = data.contacts || [];
-  allMessages = data.messages || { english: [], afrikaans: [] };
+  const data = await chrome.storage.local.get(['contacts', 'messages', 'apiKey', 'toneHistory']);
+  allContacts  = data.contacts    || [];
+  allMessages  = data.messages    || { english: [], afrikaans: [] };
+  apiKey       = data.apiKey      || '';
+  toneHistory  = data.toneHistory || [];
 
-  // Clear the badge and dismiss notification as soon as popup opens
+  // Clear badge and notification on popup open
   chrome.action.setBadgeText({ text: '' });
   chrome.notifications.clear('birthday-notification');
 
-  // Update today badge count on the tab button
-  const todayCount = birthdaysOnDate(allContacts, new Date()).length;
-  const badge = document.getElementById('todayBadge');
+  // Today badge on the tab button
+  const todayCount = birthdaysOnDate(new Date()).length;
   if (todayCount > 0) {
-    badge.textContent = todayCount;
-    badge.style.display = 'inline-block';
+    const badge = document.getElementById('todayBadge');
+    badge.textContent    = todayCount;
+    badge.style.display  = 'inline-block';
   }
 
-  renderDayScroll();
+  initInfiniteScroll();
 
   // View toggle
   document.getElementById('btnViewToday').addEventListener('click', () => showView('today'));
   document.getElementById('btnViewAll').addEventListener('click',   () => showView('all'));
 
-  // All contacts search
-  document.getElementById('searchInput').addEventListener('input', e => {
-    renderAllContacts(e.target.value);
-  });
+  // Search
+  document.getElementById('searchInput').addEventListener('input', e => renderAllContacts(e.target.value));
 
-  // Settings / manage
+  // Settings buttons
   document.getElementById('settingsBtn').addEventListener('click', () => chrome.runtime.openOptionsPage());
   document.getElementById('manageBtn').addEventListener('click',   () => chrome.runtime.openOptionsPage());
-
-  // Language selector
-  document.getElementById('msgLang').addEventListener('change', () => {
-    selectedMsgIndex = 0;
-    renderMsgList();
-  });
 
   // Close composer
   document.getElementById('closeComposer').addEventListener('click', closeComposer);
 
-  // Copy message
-  document.getElementById('copyMsgBtn').addEventListener('click', async () => {
-    const text = document.getElementById('msgPreview').textContent;
+  // Regenerate AI message
+  document.getElementById('regenBtn').addEventListener('click', triggerGenerate);
+
+  // Copy AI message & save to tone history
+  document.getElementById('copyAiBtn').addEventListener('click', async () => {
+    const textarea = document.getElementById('aiMessage');
+    const text = textarea.value.trim();
     if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    const fb = document.getElementById('copyFeedback');
-    fb.style.display = 'block';
-    setTimeout(() => { fb.style.display = 'none'; }, 3000);
+    await copyToClipboard(text);
+    await saveToneEdit(composerGenerated, text);
+    showCopyFeedback();
   });
+
+  // Template language selector
+  document.getElementById('msgLang').addEventListener('change', () => {
+    selectedTplIndex = 0;
+    renderTemplateList();
+  });
+
+  // Copy template message
+  document.getElementById('copyTplBtn').addEventListener('click', async () => {
+    const preview = document.getElementById('msgPreview');
+    if (!preview?.textContent) return;
+    await copyToClipboard(preview.textContent);
+    showCopyFeedback();
+  });
+
+  // "Add API key" shortcut from template fallback hint
+  document.getElementById('goToApiKey').addEventListener('click', () => chrome.runtime.openOptionsPage());
 });
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+
+function showCopyFeedback() {
+  const fb = document.getElementById('copyFeedback');
+  fb.style.display = 'block';
+  setTimeout(() => { fb.style.display = 'none'; }, 3000);
+}
