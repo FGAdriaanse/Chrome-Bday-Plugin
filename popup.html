@@ -21,12 +21,8 @@
 
   <!-- ── VIEW: Today ── -->
   <div id="viewToday">
-    <div class="section">
-      <div id="birthdayList"></div>
-      <div id="noBirthdays" class="empty-state" style="display:none">
-        🎈 No birthdays today — check back tomorrow!
-      </div>
-    </div>
+    <!-- Scrollable multi-day view: yesterday → today → tomorrow → day after -->
+    <div id="dayScroll"></div>
 
     <!-- Message Composer (starred contacts only, shown on demand) -->
     <div id="composer" class="section composer" style="display:none">
