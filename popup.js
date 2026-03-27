@@ -525,4 +525,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Settings / manage
   document.getElementById('settingsBtn').addEventListener('click', () => chrome.runtime.openOptionsPage());
   document.getElementById('manageBtn').addEventListener('click',   () => chrome.runtime.openOptionsPage());
+
+  // Buy me a coffee — open in new tab (extensions can't use plain href target="_blank")
+  document.getElementById('coffeeBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: 'https://www.buymeacoffee.com/YOUR_USERNAME' });
+  });
 });

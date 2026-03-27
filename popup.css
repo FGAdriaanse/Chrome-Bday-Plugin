@@ -338,9 +338,13 @@ body {
 
 /* ── Footer ──────────────────────────────────────────────── */
 .footer {
-  padding: 7px 14px;
+  padding: 7px 14px 9px;
   text-align: center;
   border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 .footer-link {
   background: none; border: none; color: #aaa;
@@ -348,6 +352,18 @@ body {
   transition: color 0.15s;
 }
 .footer-link:hover { color: #1976d2; }
+
+.coffee-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #FFDD00; color: #000;
+  border: none; border-radius: 8px;
+  font-size: 12px; font-weight: 700;
+  padding: 6px 14px;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+  line-height: 1;
+}
+.coffee-btn:hover { background: #f5d000; transform: scale(1.03); }
 
 /* ── Empty state ─────────────────────────────────────────── */
 .empty-state {
