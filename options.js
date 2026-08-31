@@ -87,6 +87,8 @@ function parseCSV(text) {
 
     const name      = cols[0] ? cols[0].replace(/^"|"$/g, '').trim() : '';
     const birthdate = cols[1] ? cols[1].replace(/^"|"$/g, '').trim() : '';
+    const starredRaw = cols[2] ? cols[2].replace(/^"|"$/g, '').trim().toLowerCase() : '';
+    const starred    = ['true', '1', 'yes'].includes(starredRaw);
 
     if (!name) {
       errors.push(`Row ${idx + 1}: missing name`);
@@ -102,10 +104,47 @@ function parseCSV(text) {
       return;
     }
 
-    results.push({ name, birthdate: normalised });
+    results.push({ name, birthdate: normalised, starred });
   });
 
   return { results, errors };
+}
+
+// ── CSV Export (backup) ──────────────────────────────────────────────────────
+
+function csvEscape(field) {
+  const str = String(field);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function exportContactsToCSV() {
+  const rows = allContacts.map(c =>
+    [csvEscape(c.name), csvEscape(c.birthdate), c.starred ? 'TRUE' : 'FALSE'].join(',')
+  );
+  const csv  = rows.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `birthday-buddy-backup-${date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function initExportButton() {
+  const btn = document.getElementById('exportBtn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    if (allContacts.length === 0) {
+      alert('No contacts to export yet.');
+      return;
+    }
+    exportContactsToCSV();
+  });
 }
 
 // ── CSV Import Tab ────────────────────────────────────────────────────────────
@@ -166,7 +205,7 @@ function initImportTab() {
              c.birthdate === row.birthdate
       );
       if (exists) { skipped++; return; }
-      allContacts.push({ id: generateId(), name: row.name, birthdate: row.birthdate, starred: false });
+      allContacts.push({ id: generateId(), name: row.name, birthdate: row.birthdate, starred: !!row.starred });
       added++;
     });
 
@@ -454,6 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
   initTabs();
   initImportTab();
+  initExportButton();
   initAddTab();
   initContactsTab();
   initMessagesTab();

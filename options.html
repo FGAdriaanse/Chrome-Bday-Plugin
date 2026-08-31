@@ -27,10 +27,12 @@
     <p class="hint">
       Your CSV should have <strong>Name in column A</strong> and
       <strong>Birthdate (YYYY/MM/DD) in column B</strong>, with no header row.
+      An optional <strong>third column</strong> (TRUE/FALSE) sets VIP/starred status —
+      this is the format used by the "Export to CSV" backup on the All Contacts tab.
     </p>
     <div class="csv-example">
-      <code>John Smith,1991/03/25</code><br>
-      <code>Jane Doe,1985/11/08</code>
+      <code>John Smith,1991/03/25,TRUE</code><br>
+      <code>Jane Doe,1985/11/08,FALSE</code>
     </div>
     <div class="form-row">
       <label class="file-label" for="csvFile">
@@ -80,7 +82,12 @@
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="🔍 Search by name…" />
       </div>
+      <button id="exportBtn" class="btn btn-secondary">⬇️ Export to CSV</button>
     </div>
+    <p class="hint" style="margin-bottom:14px">
+      Backs up all your birthdays to a CSV file (opens in Excel or Google Sheets).
+      Keep it somewhere safe — you can re-import it here anytime, e.g. after switching computers.
+    </p>
     <div id="contactList"></div>
     <div id="noContacts" class="empty-state" style="display:none">
       No contacts yet. Import a CSV or add one manually.
